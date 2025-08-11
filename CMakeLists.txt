@@ -60,8 +60,14 @@ ament_export_dependencies(rosidl_default_runtime rclcpp std_msgs)
 
 install(PROGRAMS
     path_reuse_method/path_seed_client.py
+    path_reuse_method/decode_server.py
+    path_reuse_method/test_xarm6_move_by_pr_method.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# launch/ をインストール
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_package()
