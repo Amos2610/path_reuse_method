@@ -1,5 +1,4 @@
 # Request
-string path_seed_name
 ---
 # Response
 PathSeed path_seed
