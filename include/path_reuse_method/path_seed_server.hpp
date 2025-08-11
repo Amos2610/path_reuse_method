@@ -36,6 +36,12 @@ private:
   rclcpp::Service<path_reuse_method::srv::SetPathSeedTrajectory>::SharedPtr set_srv_;
   rclcpp::Service<path_reuse_method::srv::GetPathSeedTrajectory>::SharedPtr get_srv_;
   rclcpp::Service<path_reuse_method::srv::DecodePathSeed>::SharedPtr decode_srv_;
+  // path_seed_server.py にサブサーバを構築
+  rclcpp::Client<path_reuse_method::srv::DecodePathSeed>::SharedPtr decode_sub_srv_;
+
+  // コールバックグループ（python側のサブサービスを待つため）
+  rclcpp::CallbackGroup::SharedPtr client_cbg_;
+
 
   // 内部状態（PathSeedの保存用など、必要なら追加で定義）
   path_reuse_method::msg::PathSeed latest_path_seed_;

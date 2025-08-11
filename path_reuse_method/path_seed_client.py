@@ -20,13 +20,9 @@ class PathSeedClient(Node):
             while not cli.wait_for_service(timeout_sec=1.0):
                 self.get_logger().info(f'Service {cli.srv_name} not available, waiting...')
 
-    def send_set_path_seed(self, rows, cols, data):
+    def send_set_path_seed(self, path_seed: PathSeed):
         req = SetPathSeedTrajectory.Request()
-        req.path_seed.rows = rows
-        req.path_seed.cols = cols
-        req.path_seed.data = data
-        req.rows = rows
-        req.cols = cols
+        req.path_seed = path_seed
 
         future = self.set_cli.call_async(req)
         rclpy.spin_until_future_complete(self, future)
@@ -42,7 +38,7 @@ class PathSeedClient(Node):
         rclpy.spin_until_future_complete(self, future)
         result = future.result()
         if result:
-            self.get_logger().info(f"[Get] rows={result.rows}, cols={result.cols}, data={result.path_seed.data[:10]} ...")
+            self.get_logger().info(f"[Get] rows={result.path_seed.rows}, cols={result.path_seed.cols}, data={result.path_seed.data[:10]} ...")
         else:
             self.get_logger().error('[Get] Service call failed')
 
@@ -57,9 +53,11 @@ class PathSeedClient(Node):
         result = future.result()
         if result:
             self.get_logger().info(
-                f"[Decode] rows={result.rows}, cols={result.cols}, data={result.path_seed.data[:10]} ...")
+                f"[Decode] rows={result.path_seed.rows}, cols={result.path_seed.cols}, data={result.path_seed.data[:10]} ...")
         else:
             self.get_logger().error('[Decode] Service call failed')
+
+        return result.path_seed
 
 
 def main(args=None):
@@ -82,7 +80,11 @@ def main(args=None):
 
     cmd = sys.argv[1]
     if cmd == "set":
-        client.send_set_path_seed(rows, cols, data)
+        path_seed = PathSeed()
+        path_seed.rows = rows
+        path_seed.cols = cols
+        path_seed.data = data
+        client.send_set_path_seed(path_seed)
     elif cmd == "get":
         client.send_get_path_seed()
     elif cmd == "decode":
