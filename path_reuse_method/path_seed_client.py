@@ -4,7 +4,7 @@ import sys
 import rclpy
 from rclpy.node import Node
 
-from path_reuse_method.srv import SetPathSeedTrajectory, GetPathSeedTrajectory, DecodePathSeed
+from path_reuse_method.srv import SetPathSeedTrajectory, GetPathSeedTrajectory, DecodePathSeed, EncodePathSeed
 from path_reuse_method.msg import PathSeed
 
 
@@ -14,9 +14,10 @@ class PathSeedClient(Node):
         self.set_cli = self.create_client(SetPathSeedTrajectory, 'set_path_seed_trajectory')
         self.get_cli = self.create_client(GetPathSeedTrajectory, 'get_path_seed_trajectory')
         self.decode_cli = self.create_client(DecodePathSeed, 'decode_path_seed')
+        self.encode_cli = self.create_client(EncodePathSeed, 'encode_path_seed')
 
         # すべてのサービスが生きているか待つ（短縮形。実際は必要なサービスだけで良い）
-        for cli in [self.set_cli, self.get_cli, self.decode_cli]:
+        for cli in [self.set_cli, self.get_cli, self.decode_cli, self.encode_cli]:
             while not cli.wait_for_service(timeout_sec=1.0):
                 self.get_logger().info(f'Service {cli.srv_name} not available, waiting...')
 
@@ -58,6 +59,26 @@ class PathSeedClient(Node):
             self.get_logger().error('[Decode] Service call failed')
 
         return result.path_seed
+
+    def send_encode_path_seed(self, trajectory=None, trajectory_file_path=None, relative_saved_path=None):
+        req = EncodePathSeed.Request()
+        if trajectory is None and trajectory_file_path is None:
+            self.get_logger().error("No input provided for encoding.")
+            return
+
+        req.trajectory = trajectory
+        req.trajectory_file_path = trajectory_file_path
+        req.relative_saved_path = relative_saved_path
+
+        future = self.encode_cli.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
+        result = future.result()
+        if result:
+            self.get_logger().info(f"[Encode] Response: success={result.success}, path_seed_path='{result.path_seed_path}'")
+        else:
+            self.get_logger().error('[Encode] Service call failed')
+
+        return result.success, result.path_seed_path
 
 
 def main(args=None):

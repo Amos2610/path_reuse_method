@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(trajectory_msgs REQUIRED)
 # find_package(Eigen3 REQUIRED)
 # find_package(nlohmann_json REQUIRED)
 
@@ -22,6 +23,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetPathSeedTrajectory.srv"
   "srv/GetPathSeedTrajectory.srv"
   "srv/DecodePathSeed.srv"
+  "srv/EncodePathSeed.srv"
+  DEPENDENCIES std_msgs trajectory_msgs
 )
 
 # path_seed_server.cpp
@@ -61,7 +64,9 @@ ament_export_dependencies(rosidl_default_runtime rclcpp std_msgs)
 install(PROGRAMS
     path_reuse_method/path_seed_client.py
     path_reuse_method/decode_server.py
-    path_reuse_method/test_xarm6_move_by_pr_method.py
+    path_reuse_method/encode_server.py
+    path_reuse_method/test/test_xarm6_move_by_pr_method.py
+    path_reuse_method/generate_path_seed.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
