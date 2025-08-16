@@ -15,12 +15,18 @@ PathSeedServer::PathSeedServer() : Node("path_seed_server")
     decode_srv_ = this->create_service<path_reuse_method::srv::DecodePathSeed>(
         "decode_path_seed",
         std::bind(&PathSeedServer::handle_decode_path_seed, this, std::placeholders::_1, std::placeholders::_2));
+    encode_srv_ = this->create_service<path_reuse_method::srv::EncodePathSeed>(
+        "encode_path_seed",
+        std::bind(&PathSeedServer::handle_encode_path_seed, this, std::placeholders::_1, std::placeholders::_2));
     // Python側のサブサービスのクライアントを作成
     decode_sub_srv_ = this->create_client<path_reuse_method::srv::DecodePathSeed>(
         "decode_path_seed_sub_server",
         rmw_qos_profile_services_default,
         client_cbg_);
-
+    encode_sub_srv_ = this->create_client<path_reuse_method::srv::EncodePathSeed>(
+        "encode_path_seed_sub_server",
+        rmw_qos_profile_services_default,
+        client_cbg_);
     RCLCPP_INFO(this->get_logger(), "PathSeedServer with all services ready!");
 }
 
@@ -106,6 +112,73 @@ void PathSeedServer::handle_decode_path_seed(
                 "Decode done: rows=%d cols=%d size=%zu",
                 latest_path_seed_.rows, latest_path_seed_.cols,
                 latest_path_seed_.data.size());
+}
+
+// --------- EncodePathSeedサービスのコールバック ---------
+void PathSeedServer::handle_encode_path_seed(
+    const std::shared_ptr<path_reuse_method::srv::EncodePathSeed::Request> request,
+    std::shared_ptr<path_reuse_method::srv::EncodePathSeed::Response> response)
+{
+    // 入力チェック
+    if (request->trajectory.points.empty() && request->trajectory_file_path.empty()) {
+        RCLCPP_ERROR(this->get_logger(), "No trajectory data or trajectory_file_path provided.");
+        response->success = false;
+        response->path_seed_path.clear();
+        return;
+    }
+    if (request->relative_saved_path.empty()) {
+        RCLCPP_ERROR(this->get_logger(), "relative_saved_path is empty.");
+        response->success = false;
+        response->path_seed_path.clear();
+        return;
+    }
+    if (!request->trajectory.points.empty() && !request->trajectory_file_path.empty()) {
+        RCLCPP_WARN(this->get_logger(),
+                    "Both trajectory and trajectory_file_path provided. trajectory will be used.");
+    }
+
+    RCLCPP_INFO(this->get_logger(), 
+                "EncodePathSeed: trajectory_file_path=%s, relative_saved_path=%s",
+                request->trajectory_file_path.c_str(), request->relative_saved_path.c_str());
+
+    // Pythonサブサービス待機
+    if (!encode_sub_srv_->wait_for_service(std::chrono::seconds(10))) {
+        RCLCPP_ERROR(this->get_logger(), "encode_path_seed_worker not available");
+        response->success = false;
+        response->path_seed_path.clear();
+        return;
+    }
+
+    // リクエスト転送
+    auto req = std::make_shared<path_reuse_method::srv::EncodePathSeed::Request>();
+    req->trajectory = request->trajectory;
+    req->trajectory_file_path = request->trajectory_file_path;
+    req->relative_saved_path = request->relative_saved_path;
+
+    auto future = encode_sub_srv_->async_send_request(req);
+    auto status = future.wait_for(std::chrono::seconds(60));
+    if (status != std::future_status::ready) {
+        RCLCPP_ERROR(this->get_logger(), "Timeout waiting encode_path_seed_worker response");
+        response->success = false;
+        response->path_seed_path.clear();
+        return;
+    }
+
+    // レスポンス受信
+    auto worker_resp = future.get();
+    if (!worker_resp) {
+        RCLCPP_ERROR(this->get_logger(), "encode_path_seed_worker returned null response");
+        response->success = false;
+        response->path_seed_path.clear();
+        return;
+    }
+
+    response->success = worker_resp->success;
+    response->path_seed_path = worker_resp->path_seed_path;
+
+    RCLCPP_INFO(this->get_logger(),
+                "Encode done: success=%d, path_seed_path=%s",
+                response->success, response->path_seed_path.c_str());
 }
 
 // --------- main関数 ---------
