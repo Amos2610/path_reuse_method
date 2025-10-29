@@ -3,7 +3,7 @@
 import ast
 import rclpy
 from rclpy.node import Node
-from path_reuse_method.srv import DecodePathSeed
+from path_reuse_method_interfaces.srv import DecodePathSeed
 from tools import decode
 
 

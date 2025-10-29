@@ -11,7 +11,7 @@ from trajectory_msgs.msg import JointTrajectory
 from moveit_msgs.action import ExecuteTrajectory
 from xarm_utils_py import XArmUtils
 from xarm_utils_py import Node as XArmNode
-from path_reuse_method.srv import EncodePathSeed
+from path_reuse_method_interfaces.srv import EncodePathSeed
 
 START_JOINT_VALUES = [0.916, 0.724, -1.700, 0.001, 0.977, -0.67]
 GOAL_JOINT_VALUES  = [2.227, 0.731, -1.714, 0.002, 0.983, 0.551]
