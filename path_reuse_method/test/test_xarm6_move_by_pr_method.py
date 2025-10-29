@@ -6,7 +6,7 @@ from rclpy.parameter import Parameter
 from rclpy.node import Node
 
 # 既存の PR クライアント
-from path_seed_client import PathSeedClient
+from path_reuse_method.path_seed_client import PathSeedClient
 
 # 既存の xArm ユーティリティ
 from xarm_utils_py import XArmUtils, Node as XArmNode

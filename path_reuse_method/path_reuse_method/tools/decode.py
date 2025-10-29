@@ -5,6 +5,8 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
+PACKAGE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 class Decoder(Node):
     def __init__(self):
@@ -154,10 +156,10 @@ class Decoder(Node):
             write_data: 書き込むデータ
             write_file: 書き込むファイル
         """
-        directory_name = "decoded_data"
+        timestamp = datetime.datetime.now().strftime("%Y%m%d")
+        directory_name = os.path.join(PACKAGE_PATH, "io", "decoded_data", timestamp)
         # ディレクトリが存在しない場合は作成
-        if not os.path.exists(directory_name):
-            os.makedirs(directory_name)
+        os.makedirs(directory_name, exist_ok=True)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         write_file = os.path.join(directory_name, write_file + "_" + timestamp + ".txt")
         # データをフォーマット
@@ -173,6 +175,19 @@ class Decoder(Node):
         Args:
             pathseed_file: デコードしたいファイル
         """
+        if not os.path.isabs(pathseed_file) and not os.path.isfile(pathseed_file):
+            base_path = os.path.join(PACKAGE_PATH, "..", "pathseeds", "Library")
+            rel = os.path.normpath(pathseed_file)
+            if not rel.endswith(".txt"):
+                rel += ".txt"
+            pathseed_file = os.path.join(base_path, rel)
+        else:
+            pathseed_file = os.path.abspath(pathseed_file)
+
+        if not os.path.isfile(pathseed_file):
+            self.get_logger().error(f"PathSeed file not found: {pathseed_file}")
+            raise FileNotFoundError(f"PathSeed file not found: {pathseed_file}")
+
         with open(pathseed_file, "r") as f:  # ファイルを読み込む
             data = f.read()
             self.get_logger().info(f"data: {data}")
@@ -183,7 +198,6 @@ class Decoder(Node):
 
         self.write_data(generate_path, "generated_path")  # データをファイルに書き込む
         return generate_path
-
 
 def main(args=None):
     rclpy.init(args=args)

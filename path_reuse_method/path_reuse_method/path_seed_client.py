@@ -3,9 +3,10 @@
 import sys
 import rclpy
 from rclpy.node import Node
+from trajectory_msgs.msg import JointTrajectory
 
-from path_reuse_method.srv import SetPathSeedTrajectory, GetPathSeedTrajectory, DecodePathSeed, EncodePathSeed
-from path_reuse_method.msg import PathSeed
+from path_reuse_method_interfaces.srv import SetPathSeedTrajectory, GetPathSeedTrajectory, DecodePathSeed, EncodePathSeed
+from path_reuse_method_interfaces.msg import PathSeed
 
 
 class PathSeedClient(Node):
@@ -109,7 +110,7 @@ def main(args=None):
     elif cmd == "get":
         client.send_get_path_seed()
     elif cmd == "decode":
-        path_seed_name = "dummy_seed"
+        path_seed_name = "ex1_pick_and_place/updated/pathseed_pick.txt"
         start_joints = [0.1] * 6
         goal_joints = [0.2] * 6
         client.send_decode_path_seed(path_seed_name, start_joints, goal_joints)

@@ -10,37 +10,30 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 # find_package(Eigen3 REQUIRED)
 # find_package(nlohmann_json REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(path_reuse_method_interfaces REQUIRED)
+ament_python_install_package(${PROJECT_NAME})
 
 include_directories(include)
 ament_export_include_directories(include)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/PathSeed.msg"
-  "srv/SetPathSeedTrajectory.srv"
-  "srv/GetPathSeedTrajectory.srv"
-  "srv/DecodePathSeed.srv"
-  "srv/EncodePathSeed.srv"
-  DEPENDENCIES std_msgs trajectory_msgs
-)
 
 # path_seed_server.cpp
 add_executable(path_seed_server src/path_seed_server.cpp)
 ament_target_dependencies(path_seed_server
   # 必要な依存関係を追加
   rclcpp 
-  # Eigen3 
-  # nlohmann_json
+  path_reuse_method_interfaces
 )
-# 生成された型をインクルードできるように
-rosidl_target_interfaces(path_seed_server
-${PROJECT_NAME} "rosidl_typesupport_cpp")
-install(TARGETS path_seed_server
-  DESTINATION lib/${PROJECT_NAME}
-)
+# # 生成された型をインクルードできるように
+# rosidl_target_interfaces(path_seed_server
+# ${PROJECT_NAME} "rosidl_typesupport_cpp")
+# install(TARGETS path_seed_server
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 # # decorder.cpp
 # add_library(decoder STATIC
@@ -65,14 +58,19 @@ install(PROGRAMS
     path_reuse_method/path_seed_client.py
     path_reuse_method/decode_server.py
     path_reuse_method/encode_server.py
-    path_reuse_method/test/test_xarm6_move_by_pr_method.py
+    test/test_xarm6_move_by_pr_method.py
     path_reuse_method/generate_path_seed.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS path_seed_server
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 # launch/ をインストール
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
+
 
 ament_package()
