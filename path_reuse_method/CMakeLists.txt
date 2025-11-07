@@ -60,6 +60,7 @@ install(PROGRAMS
     path_reuse_method/encode_server.py
     test/test_xarm6_move_by_pr_method.py
     path_reuse_method/generate_path_seed.py
+    path_reuse_method/generate_path_seed_from_gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

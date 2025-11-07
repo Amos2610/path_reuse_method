@@ -4,7 +4,7 @@ import ast
 import rclpy
 from rclpy.node import Node
 from path_reuse_method_interfaces.srv import DecodePathSeed
-from tools import decode
+from path_reuse_method.tools import decode
 
 
 class DecodeServer(Node):

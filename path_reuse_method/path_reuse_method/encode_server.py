@@ -11,7 +11,7 @@ import tempfile
 from ament_index_python.packages import get_package_share_directory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from path_reuse_method_interfaces.srv import EncodePathSeed
-from tools import encode
+from path_reuse_method.tools import encode
 import shutil
 
 

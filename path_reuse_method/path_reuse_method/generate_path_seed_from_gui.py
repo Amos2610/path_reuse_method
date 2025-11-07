@@ -1,25 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import datetime
 import rclpy
 from rclpy.node import Node
+from rclpy.action import ActionServer
+from geometry_msgs.msg import Pose
 from trajectory_msgs.msg import JointTrajectory
+from moveit_msgs.action import ExecuteTrajectory
 from xarm_utils_py import XArmUtils
 from xarm_utils_py import Node as XArmNode
 from path_reuse_method_interfaces.srv import EncodePathSeed
 
-START_JOINT_VALUES = [0.916, 0.724, -1.700, 0.001, 0.977, -0.67]
-GOAL_JOINT_VALUES  = [2.227, 0.731, -1.714, 0.002, 0.983, 0.551]
 
-
-class GeneratePathSeed(Node):
+class GeneratePathSeedFromGUI(Node):
     def __init__(self):
-        super().__init__('generate_pathseed_node')
+        super().__init__('generate_pathseed_from_gui_node')
 
         xarm_node = XArmNode("xarm6_utils_node")
 
         # XArm6初期化
         self.xarm = XArmUtils(xarm_node, "xarm6")
+
+        # ActionServerの初期化
+        self._action_server = ActionServer(
+            self,
+            ExecuteTrajectory,
+            '/execute_trajectory',
+            self.execute_callback
+        )
 
         # サービスクライアントの作成
         self.cli = self.create_client(EncodePathSeed, 'encode_path_seed_sub_server')
@@ -51,39 +61,22 @@ class GeneratePathSeed(Node):
         else:
             self.get_logger().error("サービス呼び出しに失敗しました")
             return None
-
-    def to_given_goal(self):
-        """手動で start/goal を与えて生成"""
-        self.get_logger().info(f"Start joints: {START_JOINT_VALUES}")
-        self.get_logger().info(f"Goal joints:  {GOAL_JOINT_VALUES}")
-
-        # start位置に移動
-        self.get_logger().info("Moving to start position...")
-        self.xarm.set_joint_value_target(START_JOINT_VALUES)
-        success, plan, _, _ = self.xarm.plan()
-        if success is True:
-            self.xarm.execute()
-            self.get_logger().info("Start position reached")
-
-        result = None
-        plan = None
-        while result != "y":
-            self.xarm.set_joint_value_target(GOAL_JOINT_VALUES)
-            success, plan, _, _ = self.xarm.plan()
-            if not success:
-                self.get_logger().warn("Planning failed, retrying...")
-                continue
-
-            result = input(">>> Do you want to save this plan in pathseed? (y/n):")
-            if result == "y":
-                break
-        self._call_encode_service(plan)
+    
+    async def execute_callback(self, goal_handle):
+        self.get_logger().info("ExecuteTrajectory goal 受信")
+        traj = goal_handle.request.trajectory.joint_trajectory
+        self._call_encode_service(traj)
+        goal_handle.succeed()
+        return ExecuteTrajectory.Result()
 
 
 def main():
     rclpy.init()
-    node = GeneratePathSeed()
-    node.to_given_goal()
+    node = GeneratePathSeedFromGUI()
+    # waiting log
+    node.get_logger().info("Waiting for ExecuteTrajectory goals...")
+    node.get_logger().info("RVizのGUIを利用して，目標位置までのパスを実行してください．")
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
