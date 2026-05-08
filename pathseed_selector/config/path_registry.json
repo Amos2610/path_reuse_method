@@ -1,0 +1,45 @@
+{
+  "version": "0.4",
+  "records": [
+    {
+      "seed_id": "seed_grasp_stomp_0001",
+      "environment_id": "desk_scene_v1",
+      "relative_path": "ex1_pick_and_place/pre_defined/pick/pathseed_pick_0529_STOMP01.txt",
+      "skill_name": "SkillGraspObj",
+      "start_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "goal_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "plan_time_sec": 0.187,
+      "success_count": 0
+    },
+    {
+      "seed_id": "seed_grasp_rrt_connect_0001",
+      "environment_id": "desk_scene_v1",
+      "relative_path": "ex1_pick_and_place/pre_defined/pick/pathseed_pick_0529_RRT-connect01.txt",
+      "skill_name": "SkillGraspObj",
+      "start_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "goal_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "plan_time_sec": 0.202,
+      "success_count": 0
+    },
+    {
+      "seed_id": "seed_put_stomp_0001",
+      "environment_id": "desk_scene_v1",
+      "relative_path": "ex1_pick_and_place/pre_defined/place/pathseed_place_0627_STOMP01.txt",
+      "skill_name": "SkillPutObj",
+      "start_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "goal_joints": [2.268928025, 0.8203047475, -1.8675022975, 0.0, 1.04719755, 0.593411945],
+      "plan_time_sec": 0.132,
+      "success_count": 0
+    },
+    {
+      "seed_id": "seed_put_rrt_connect_0001",
+      "environment_id": "desk_scene_v1",
+      "relative_path": "ex1_pick_and_place/pre_defined/place/pathseed_place_0627_RRT-connect01.txt",
+      "skill_name": "SkillPutObj",
+      "start_joints": [0.916, 0.724, -1.70014, 0.001, 0.977, -0.67],
+      "goal_joints": [2.268928025, 0.8203047475, -1.8675022975, 0.0, 1.04719755, 0.593411945],
+      "plan_time_sec": 0.202,
+      "success_count": 0
+    }
+  ]
+}
