@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from .validator import PathSeedValidator
 
 
 class PathSeedSelector:
+    """パスシードを選択する"""
     def __init__(
         self,
         registry_path: str | Path,
@@ -30,12 +32,14 @@ class PathSeedSelector:
         self,
         environment_id: str,
         skill_name: str | None = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[PathSeedCandidate]:
         candidates: list[PathSeedCandidate] = []
 
         for record in self.registry.find_records(
             environment_id=environment_id,
             skill_name=skill_name,
+            metadata_filters=metadata_filters,
         ):
             absolute_path = self.registry.resolve_path(record)
             if not self.validator.validate_file_exists(absolute_path):
@@ -98,12 +102,93 @@ class PathSeedSelector:
                 return True
         return False
 
+    def select_nearest_by_start_goal(
+        self,
+        environment_id: str,
+        target_start_joints: list[float],
+        target_goal_joints: list[float],
+        skill_name: str | None = None,
+        metadata_filters: dict[str, Any] | None = None,
+        top_k: int = 3,
+    ) -> dict[str, Any]:
+        # 候補seedを取得
+        candidates = self.build_candidates(
+            environment_id=environment_id,
+            skill_name=skill_name,
+            metadata_filters=metadata_filters,
+        )
+
+        # 距離を計算（start距離 + goal距離）
+        scored: list[dict[str, Any]] = []
+        for candidate in candidates:
+            # 比較用のstart/goalを取得
+            start_ref, goal_ref = self._reference_start_goal(candidate)
+
+            # L2距離
+            start_dist = self._l2_distance(start_ref, target_start_joints)
+            goal_dist = self._l2_distance(goal_ref, target_goal_joints)
+            total_dist = start_dist + goal_dist
+
+            scored.append(
+                {
+                    "seed_id": candidate.record.seed_id,
+                    "environment_id": candidate.record.environment_id,
+                    "skill_name": candidate.record.skill_name,
+                    "relative_path": candidate.record.relative_path,
+                    "absolute_path": str(candidate.absolute_path),
+                    "start_distance": start_dist,
+                    "goal_distance": goal_dist,
+                    "distance": total_dist,
+                    "success_count": candidate.record.success_count,
+                    "metadata": candidate.record.metadata,
+                }
+            )
+
+        # 近い順にソート
+        scored.sort(key=lambda x: x["distance"])
+        return {
+            # 1位
+            "selected_seed": scored[0] if scored else None,
+            # 上位k件
+            "evaluations": scored[:top_k],
+        }
+
+    @staticmethod
+    def _reference_start_goal(candidate: PathSeedCandidate) -> tuple[list[float], list[float]]:
+        # metadataがなければ空dict
+        metadata = candidate.record.metadata or {}
+        meta_start = metadata.get("start_joints")
+        meta_goal = metadata.get("goal_joints")
+
+        # metadata優先、なければrecord値
+        start = (
+            [float(x) for x in meta_start]
+            if isinstance(meta_start, list) and meta_start
+            else [float(x) for x in candidate.record.start_joints]
+        )
+        goal = (
+            [float(x) for x in meta_goal]
+            if isinstance(meta_goal, list) and meta_goal
+            else [float(x) for x in candidate.record.goal_joints]
+        )
+        return start, goal
+
+    @staticmethod
+    def _l2_distance(a: list[float], b: list[float]) -> float:
+        # 要素数チェック
+        if len(a) != len(b):
+            raise ValueError(f"joint length mismatch: {len(a)} != {len(b)}")
+        # L2距離
+        return math.sqrt(sum((float(x) - float(y)) ** 2 for x, y in zip(a, b)))
+
     @staticmethod
     def make_demo_path(
         start_joints: list[float],
         goal_joints: list[float],
         offset: float = 0.0,
     ) -> JointPath:
+        """s,gの中間地点を生成
+        """
         mid = [
             0.5 * (s + g) + offset
             for s, g in zip(start_joints, goal_joints)

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from ..type.models import PathSeedRecord
 
@@ -26,6 +27,10 @@ class PathSeedRegistry:
             data = json.load(f)
 
         for item in data.get("records", []):
+            metadata = item.get("metadata")
+            if metadata is not None and not isinstance(metadata, dict):
+                metadata = {"value": metadata}
+
             self.records.append(
                 PathSeedRecord(
                     seed_id=str(item["seed_id"]),
@@ -40,6 +45,7 @@ class PathSeedRegistry:
                         else float(item.get("plan_time_sec"))
                     ),
                     success_count=int(item.get("success_count", 0)),
+                    metadata=metadata,
                 )
             )
 
@@ -56,6 +62,7 @@ class PathSeedRegistry:
                     "goal_joints": r.goal_joints,
                     "plan_time_sec": r.plan_time_sec,
                     "success_count": r.success_count,
+                    "metadata": r.metadata or {},
                 }
                 for r in self.records
             ],
@@ -75,6 +82,7 @@ class PathSeedRegistry:
         self,
         environment_id: str | None = None,
         skill_name: str | None = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[PathSeedRecord]:
         results = []
 
@@ -84,6 +92,16 @@ class PathSeedRegistry:
 
             if skill_name and skill_name not in record.skill_name:
                 continue
+
+            if metadata_filters:
+                meta = record.metadata or {}
+                matched = True
+                for k, v in metadata_filters.items():
+                    if meta.get(k) != v:
+                        matched = False
+                        break
+                if not matched:
+                    continue
 
             results.append(record)
 

@@ -89,6 +89,7 @@ class PathSeedEvaluator:
                     normalized_path_length=l_norm[idx],
                     score=score,
                     success_count=record.success_count,
+                    metadata=record.metadata,
                 )
             )
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import rclpy
 from rclpy.node import Node
 from trajectory_msgs.msg import JointTrajectory
@@ -80,6 +81,48 @@ class PathSeedClient(Node):
             self.get_logger().error('[Encode] Service call failed')
 
         return result.success, result.path_seed_path
+
+    def select_best_path_seed(
+        self,
+        environment_id: str,
+        skill_name: str,
+        start_joints: list,
+        goal_joints: list,
+        registry_path: str = "/root/ros2_ws/src/path_reuse_method/pathseed_selector/config/path_registry.json",
+        library_root: str = "/root/ros2_ws/src/path_reuse_method/pathseeds/Library",
+    ):
+        """
+        pathseed_selector を使って、start/goal に最も近い PathSeed を1件返す。
+        戻り値: 絶対パス文字列 or None
+        """
+        try:
+            from pathseed_selector.core.selector import PathSeedSelector
+            selector = PathSeedSelector(
+                registry_path=registry_path,
+                library_root=library_root,
+            )
+            result = selector.select_nearest_by_start_goal(
+                environment_id=environment_id,
+                target_start_joints=[float(x) for x in start_joints],
+                target_goal_joints=[float(x) for x in goal_joints],
+                skill_name=skill_name,
+                top_k=5,
+            )
+            selected = result.get("selected_seed")
+            if not selected:
+                self.get_logger().warn("[Select] No pathseed candidate matched.")
+                return None
+            abs_path = selected.get("absolute_path")
+            if abs_path and os.path.isfile(abs_path):
+                self.get_logger().info(
+                    f"[Select] selected seed_id={selected.get('seed_id')} distance={selected.get('distance'):.6f} path={abs_path}"
+                )
+                return abs_path
+            self.get_logger().warn(f"[Select] selected candidate has invalid path: {abs_path}")
+            return None
+        except Exception as e:
+            self.get_logger().error(f"[Select] selection failed: {e}")
+            return None
 
 
 def main(args=None):
