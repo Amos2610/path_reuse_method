@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any
 
 from ..type.models import PathSeedCandidate, JointPath
 from .registry import PathSeedRegistry
@@ -32,14 +31,12 @@ class PathSeedSelector:
         self,
         environment_id: str,
         skill_name: str | None = None,
-        metadata_filters: dict[str, Any] | None = None,
     ) -> list[PathSeedCandidate]:
         candidates: list[PathSeedCandidate] = []
 
         for record in self.registry.find_records(
             environment_id=environment_id,
             skill_name=skill_name,
-            metadata_filters=metadata_filters,
         ):
             absolute_path = self.registry.resolve_path(record)
             if not self.validator.validate_file_exists(absolute_path):
@@ -108,14 +105,12 @@ class PathSeedSelector:
         target_start_joints: list[float],
         target_goal_joints: list[float],
         skill_name: str | None = None,
-        metadata_filters: dict[str, Any] | None = None,
         top_k: int = 3,
     ) -> dict[str, Any]:
         # 候補seedを取得
         candidates = self.build_candidates(
             environment_id=environment_id,
             skill_name=skill_name,
-            metadata_filters=metadata_filters,
         )
 
         # 距離を計算（start距離 + goal距離）
@@ -140,7 +135,6 @@ class PathSeedSelector:
                     "goal_distance": goal_dist,
                     "distance": total_dist,
                     "success_count": candidate.record.success_count,
-                    "metadata": candidate.record.metadata,
                 }
             )
 
@@ -155,23 +149,10 @@ class PathSeedSelector:
 
     @staticmethod
     def _reference_start_goal(candidate: PathSeedCandidate) -> tuple[list[float], list[float]]:
-        # metadataがなければ空dict
-        metadata = candidate.record.metadata or {}
-        meta_start = metadata.get("start_joints")
-        meta_goal = metadata.get("goal_joints")
-
-        # metadata優先、なければrecord値
-        start = (
-            [float(x) for x in meta_start]
-            if isinstance(meta_start, list) and meta_start
-            else [float(x) for x in candidate.record.start_joints]
+        return (
+            [float(x) for x in candidate.record.start_joints],
+            [float(x) for x in candidate.record.goal_joints],
         )
-        goal = (
-            [float(x) for x in meta_goal]
-            if isinstance(meta_goal, list) and meta_goal
-            else [float(x) for x in candidate.record.goal_joints]
-        )
-        return start, goal
 
     @staticmethod
     def _l2_distance(a: list[float], b: list[float]) -> float:

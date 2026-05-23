@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 JointPath = list[list[float]]
@@ -23,7 +22,6 @@ class PathSeedRecord:
 
     plan_time_sec: float | None = None
     success_count: int = 0
-    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -54,4 +52,3 @@ class PathSeedEvaluation:
 
     score: float
     success_count: int
-    metadata: dict[str, Any] | None = None
