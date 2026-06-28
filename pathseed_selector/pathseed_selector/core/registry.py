@@ -44,21 +44,23 @@ class PathSeedRegistry:
             )
 
     def save(self) -> None:
+        records = []
+        for r in self.records:
+            item = {
+                "seed_id": r.seed_id,
+                "environment_id": r.environment_id,
+                "relative_path": r.relative_path,
+                "skill_name": r.skill_name,
+                "start_joints": r.start_joints,
+                "goal_joints": r.goal_joints,
+                "plan_time_sec": r.plan_time_sec,
+                "success_count": r.success_count,
+            }
+            records.append(item)
+
         data = {
             "version": "0.4",
-            "records": [
-                {
-                    "seed_id": r.seed_id,
-                    "environment_id": r.environment_id,
-                    "relative_path": r.relative_path,
-                    "skill_name": r.skill_name,
-                    "start_joints": r.start_joints,
-                    "goal_joints": r.goal_joints,
-                    "plan_time_sec": r.plan_time_sec,
-                    "success_count": r.success_count,
-                }
-                for r in self.records
-            ],
+            "records": records,
         }
 
         self.registry_path.parent.mkdir(parents=True, exist_ok=True)
