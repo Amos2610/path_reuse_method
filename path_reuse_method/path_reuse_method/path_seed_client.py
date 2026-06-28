@@ -2,6 +2,7 @@
 
 import sys
 import os
+import time
 import rclpy
 from rclpy.node import Node
 from trajectory_msgs.msg import JointTrajectory
@@ -20,15 +21,29 @@ class PathSeedClient(Node):
 
         # すべてのサービスが生きているか待つ（短縮形。実際は必要なサービスだけで良い）
         for cli in [self.set_cli, self.get_cli, self.decode_cli, self.encode_cli]:
-            while not cli.wait_for_service(timeout_sec=1.0):
+            while rclpy.ok() and not cli.wait_for_service(timeout_sec=1.0):
                 self.get_logger().info(f'Service {cli.srv_name} not available, waiting...')
+
+    def _is_valid_path_seed(self, path_seed: PathSeed):
+        rows = int(path_seed.rows)
+        cols = int(path_seed.cols)
+        data_size = len(path_seed.data)
+        expected_size = rows * cols
+        return rows > 0 and cols > 0 and data_size == expected_size
+
+    def _wait_for_future(self, future, timeout_sec=None):
+        start = time.time()
+        while rclpy.ok() and not future.done():
+            rclpy.spin_once(self, timeout_sec=0.1)
+            if timeout_sec is not None and (time.time() - start) >= timeout_sec:
+                break
 
     def send_set_path_seed(self, path_seed: PathSeed):
         req = SetPathSeedTrajectory.Request()
         req.path_seed = path_seed
 
         future = self.set_cli.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
         result = future.result()
         if result:
             self.get_logger().info(f"[Set] Response: success={result.success}, message='{result.message}'")
@@ -38,7 +53,7 @@ class PathSeedClient(Node):
     def send_get_path_seed(self):
         req = GetPathSeedTrajectory.Request()
         future = self.get_cli.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
         result = future.result()
         if result:
             self.get_logger().info(f"[Get] rows={result.path_seed.rows}, cols={result.path_seed.cols}, data={result.path_seed.data[:10]} ...")
@@ -52,15 +67,32 @@ class PathSeedClient(Node):
         req.goal_joints = goal_joints
 
         future = self.decode_cli.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
         result = future.result()
         if result:
             self.get_logger().info(
-                f"[Decode] rows={result.path_seed.rows}, cols={result.path_seed.cols}, data={result.path_seed.data[:10]} ...")
+                "[Decode] Response: "
+                f"path_seed_name='{path_seed_name}', "
+                f"rows={result.path_seed.rows}, "
+                f"cols={result.path_seed.cols}, "
+                f"data_size={len(result.path_seed.data)}, "
+                f"data={result.path_seed.data[:10]} ...")
+            # DecodePathSeed.srv has no success flag, so the worker reports
+            # recoverable failures as an empty PathSeed. Treat that as failure
+            # here to avoid registering/executing an invalid trajectory.
+            if not self._is_valid_path_seed(result.path_seed):
+                self.get_logger().error(
+                    "[Decode] Invalid PathSeed returned; treating decode as failed. "
+                    f"path_seed_name='{path_seed_name}', "
+                    f"rows={result.path_seed.rows}, "
+                    f"cols={result.path_seed.cols}, "
+                    f"data_size={len(result.path_seed.data)}"
+                )
+                return None
         else:
             self.get_logger().error('[Decode] Service call failed')
 
-        return result.path_seed
+        return result.path_seed if result else None
 
     def send_encode_path_seed(self, trajectory=None, trajectory_file_path=None, relative_saved_path=None):
         req = EncodePathSeed.Request()
@@ -73,14 +105,14 @@ class PathSeedClient(Node):
         req.relative_saved_path = relative_saved_path
 
         future = self.encode_cli.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+        self._wait_for_future(future)
         result = future.result()
         if result:
             self.get_logger().info(f"[Encode] Response: success={result.success}, path_seed_path='{result.path_seed_path}'")
         else:
             self.get_logger().error('[Encode] Service call failed')
 
-        return result.success, result.path_seed_path
+        return (result.success, result.path_seed_path) if result else (False, None)
 
     def select_best_path_seed(
         self,
